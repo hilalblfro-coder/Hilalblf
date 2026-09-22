@@ -11,7 +11,7 @@ PRIVATE_KEY = os.environ.get("PRIVATE_KEY")
 MY_WALLET_ADDRESS = "0x96aafcE765B0a03433483eDF4CC7311A5e7adADD"
 ADMIN_ID = 822007358
 
-# ================= إعدادات البلوكتشين (لا تغيرها) =================
+# ================= إعدادات البلوكتشين =================
 BSC_RPC = "https://bsc-dataseed.binance.org/"
 USDT_CONTRACT_ADDRESS = "0x55d398326f99059fF775485246999027B3197955" # USDT BEP-20 Contract
 
@@ -97,8 +97,8 @@ def process_amount_step(message):
         # توقيع المعاملة بالمفتاح الخاص
         signed_tx = w3.eth.account.sign_transaction(tx, private_key=PRIVATE_KEY)
         
-        # إرسال المعاملة للبلوكتشين
-        tx_hash = w3.eth.send_raw_transaction(signed_tx.rawTransaction)
+        # إرسال المعاملة للبلوكتشين (هنا تم التعديل إلى raw_transaction)
+        tx_hash = w3.eth.send_raw_transaction(signed_tx.raw_transaction)
         tx_hash_hex = w3.to_hex(tx_hash)
         
         bot.reply_to(message, f"✅ **تم الإرسال بنجاح!**\n\nالكمية: {amount} USDT\nإلى: `{target_address}`\n\nرابط التأكيد (BscScan):\nhttps://bscscan.com/tx/{tx_hash_hex}", parse_mode="Markdown", disable_web_page_preview=True)
