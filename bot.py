@@ -47,25 +47,28 @@ user_data = {}
 def send_welcome(message):
     if message.chat.id != ADMIN_ID:
         return
-    bot.reply_to(message, "أهلاً بك يا ختيار / يا سيّد! 👋\n\nابعث الأمر /send باش نبدؤوا نبعثو USDT.")
+    bot.reply_to(message, "أهلاً بك يا سيّد! 👋\n\nابعث الأمر /send باش نبدؤوا نبعثو USDT.")
 
 @bot.message_handler(commands=['send'])
 def start_send(message):
     if message.chat.id != ADMIN_ID:
         return
     
-    msg = bot.reply_to(message, "🔗 عافاك، ابعثلي **عنوان المحفظة** (Address) لي راك حاب تبعث لها:", parse_mode="Markdown")
+    # التعديل الأول هنا
+    msg = bot.reply_to(message, "🔗 هات لادراس BEP 20:", parse_mode="Markdown")
     bot.register_next_step_handler(msg, process_address_step)
 
 def process_address_step(message):
     address = message.text.strip()
     
     if not w3.is_address(address):
-        bot.reply_to(message, "❌ العنوان لي بعثتو غالط! تأكد منه وعاود ابدص من جديد بـ /send")
+        bot.reply_to(message, "❌ العنوان لي بعثتو غالط! تأكد منه وعاود ابدأ من جديد بـ /send")
         return
         
     user_data[message.chat.id] = {'target_address': address}
-    msg = bot.reply_to(message, f"✅ راني حفظت العنوان:\n`{address}`\n\n💵 درك ابعثلي **الكمية** شحال حاب تبعث (مثال: 134.5):", parse_mode="Markdown")
+    
+    # التعديل الثاني هنا
+    msg = bot.reply_to(message, f"✅ راني حفظت العنوان:\n`{address}`\n\n💵 قولي شحال ترسل:", parse_mode="Markdown")
     bot.register_next_step_handler(msg, process_amount_step)
 
 def process_amount_step(message):
@@ -89,7 +92,7 @@ def process_amount_step(message):
             bot.reply_to(message, "❌ صولد الـ BNB ما يكفيش باش تخلص حق الغاز (Gas Fees)!")
             return
 
-        bot.reply_to(message, f"⏳ جاري إرسال {apple if False else amount} USDT والانتظار حتى تؤكد الشبكة...")
+        bot.reply_to(message, f"⏳ جاري إرسال {amount} USDT والانتظار حتى تؤكد الشبكة...")
 
         nonce = w3.eth.get_transaction_count(my_address)
         
