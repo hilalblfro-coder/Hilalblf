@@ -72,18 +72,14 @@ def process_amount_step(message):
     try:
         amount = float(message.text.strip())
         target_address = w3.to_checksum_address(user_data[message.chat.id]['target_address'])
-        
-        bot.reply_to(message, "⏳ راني نتحقق من صولد الـ USDT...")
 
         amount_in_wei = int(amount * (10 ** 18))
 
-        # التحقق من رصيد USDT
+        # التحقق من رصيد USDT في الصمت
         usdt_balance = usdt_contract.functions.balanceOf(my_address).call()
         if usdt_balance < amount_in_wei:
             bot.reply_to(message, f"❌ الصولد تاعك تاع USDT ما يكفيش!\nعندك في المحفظة: {usdt_balance / (10**18)} USDT\nراك حاب تبعث: {amount} USDT")
             return
-
-        bot.reply_to(message, f"⏳ جاري إرسال {amount} USDT والانتظار حتى تؤكد الشبكة...")
 
         nonce = w3.eth.get_transaction_count(my_address)
         
@@ -97,15 +93,13 @@ def process_amount_step(message):
         signed_tx = w3.eth.account.sign_transaction(tx, private_key=PRIVATE_KEY)
         tx_hash = w3.eth.send_raw_transaction(signed_tx.raw_transaction)
         
-        # الانتظار حتى تأكيد المعاملة في البلوكتشين
-        bot.reply_to(message, "⏳ المعاملة راها تتأكد في البلوكتشين، اصبر عليا ثواني برك...")
+        # الانتظار في الصمت حتى تأكيد المعاملة في البلوكتشين
         receipt = w3.eth.wait_for_transaction_receipt(tx_hash, timeout=120)
 
         tx_hash_hex = w3.to_hex(tx_hash)
 
-        # التأكد من نجاح العملية
+        # إرسال النتيجة النهائية مباشرة
         if receipt['status'] == 1:
-            # جلب الرصيد الجديد بعد الإرسال
             new_balance = usdt_contract.functions.balanceOf(my_address).call() / (10 ** 18)
             
             success_msg = f"✅ **تم الإرسال وتأكيد العملية بنجاح!**\n\n" \
@@ -123,6 +117,6 @@ def process_amount_step(message):
     except Exception as e:
         bot.reply_to(message, f"❌ صار خطأ:\n`{str(e)}`", parse_mode="Markdown")
 
-print("البوت يتحقق من USDT ويعرض الصولد الباقي...")
+print("البوت يعمل في الصمت وبدون رسائل مزعجة...")
 if __name__ == '__main__':
     bot.infinity_polling()
