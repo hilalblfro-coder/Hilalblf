@@ -77,7 +77,7 @@ def process_amount_step(message):
 
         amount_in_wei = int(amount * (10 ** 18))
 
-        # التحقق فقط من رصيد USDT
+        # التحقق من رصيد USDT
         usdt_balance = usdt_contract.functions.balanceOf(my_address).call()
         if usdt_balance < amount_in_wei:
             bot.reply_to(message, f"❌ الصولد تاعك تاع USDT ما يكفيش!\nعندك في المحفظة: {usdt_balance / (10**18)} USDT\nراك حاب تبعث: {amount} USDT")
@@ -105,7 +105,16 @@ def process_amount_step(message):
 
         # التأكد من نجاح العملية
         if receipt['status'] == 1:
-            bot.reply_to(message, f"✅ **تم الإرسال وتأكيد العملية بنجاح!**\n\nالكمية: {amount} USDT\nإلى المحفظة: `{target_address}`\n\nرابط التأكيد (BscScan):\nhttps://bscscan.com/tx/{tx_hash_hex}", parse_mode="Markdown", disable_web_page_preview=True)
+            # جلب الرصيد الجديد بعد الإرسال
+            new_balance = usdt_contract.functions.balanceOf(my_address).call() / (10 ** 18)
+            
+            success_msg = f"✅ **تم الإرسال وتأكيد العملية بنجاح!**\n\n" \
+                          f"الكمية: {amount} USDT\n" \
+                          f"إلى المحفظة: `{target_address}`\n\n" \
+                          f"رابط التأكيد (BscScan):\nhttps://bscscan.com/tx/{tx_hash_hex}\n\n" \
+                          f"💰 **الصولد الحالي بعد الإرسال:** {new_balance} USDT"
+                          
+            bot.reply_to(message, success_msg, parse_mode="Markdown", disable_web_page_preview=True)
         else:
             bot.reply_to(message, f"❌ للأسف فشلت المعاملة في الشبكة (Transaction Failed)!\nشيك الرابط:\nhttps://bscscan.com/tx/{tx_hash_hex}", parse_mode="Markdown")
 
@@ -114,6 +123,6 @@ def process_amount_step(message):
     except Exception as e:
         bot.reply_to(message, f"❌ صار خطأ:\n`{str(e)}`", parse_mode="Markdown")
 
-print("البوت يتحقق من USDT فقط ومستعد...")
+print("البوت يتحقق من USDT ويعرض الصولد الباقي...")
 if __name__ == '__main__':
     bot.infinity_polling()
