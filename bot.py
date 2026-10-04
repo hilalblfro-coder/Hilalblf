@@ -1,4 +1,5 @@
 import telebot
+from telebot.types import ReplyKeyboardMarkup, KeyboardButton
 from web3 import Web3
 import os
 
@@ -6,11 +7,11 @@ import os
 BOT_TOKEN = os.environ.get("BOT_TOKEN")
 PRIVATE_KEY = os.environ.get("PRIVATE_KEY")
 
-# ================= الإعدادات الخاصة بك =================
+# ================= إعداداتك =================
 MY_WALLET_ADDRESS = "0x96aafcE765B0a03433483eDF4CC7311A5e7adADD"
 ADMIN_ID = 822007358
 
-# ================= إعدادات BSC =================
+# ================= BSC =================
 BSC_RPC = "https://bsc-dataseed.binance.org/"
 
 # USDT BEP-20
@@ -47,9 +48,10 @@ USDT_ABI = [
 if not BOT_TOKEN or not PRIVATE_KEY:
     print("⚠️ تحذير: BOT_TOKEN أو PRIVATE_KEY مش موجودين.")
 
-# ================= إنشاء البوت والاتصال بـ BSC =================
+# ================= إنشاء البوت =================
 bot = telebot.TeleBot(BOT_TOKEN)
 
+# ================= الاتصال بـ BSC =================
 w3 = Web3(
     Web3.HTTPProvider(BSC_RPC)
 )
@@ -69,6 +71,34 @@ user_data = {}
 
 
 # =========================================================
+# لوحة الأزرار
+# =========================================================
+
+def create_main_menu():
+
+    markup = ReplyKeyboardMarkup(
+        resize_keyboard=True
+    )
+
+    btn_send = KeyboardButton("💸 Send")
+    btn_balance = KeyboardButton("💰 Balance")
+    btn_wallet = KeyboardButton("💼 My Wallet")
+
+    # الصف الأول
+    markup.add(
+        btn_send,
+        btn_balance
+    )
+
+    # الصف الثاني
+    markup.add(
+        btn_wallet
+    )
+
+    return markup
+
+
+# =========================================================
 # /start
 # =========================================================
 
@@ -78,12 +108,13 @@ def send_welcome(message):
     if message.chat.id != ADMIN_ID:
         return
 
-    bot.reply_to(
-        message,
+    markup = create_main_menu()
+
+    bot.send_message(
+        message.chat.id,
         "أهلاً بك يا سيّد! 👋\n\n"
-        "الأوامر المتاحة:\n\n"
-        "💵 /balance — معرفة رصيد USDT\n"
-        "💸 /send — إرسال USDT"
+        "اختر العملية التي تريدها:",
+        reply_markup=markup
     )
 
 
@@ -94,18 +125,15 @@ def send_welcome(message):
 @bot.message_handler(commands=['balance'])
 def check_balance(message):
 
-    # الأدمن فقط
     if message.chat.id != ADMIN_ID:
         return
 
     try:
 
-        # قراءة رصيد USDT
         usdt_balance_raw = usdt_contract.functions.balanceOf(
             my_address
         ).call()
 
-        # USDT على BSC يستخدم 18 decimals
         usdt_balance = usdt_balance_raw / (10 ** 18)
 
         bot.reply_to(
@@ -119,6 +147,20 @@ def check_balance(message):
             message,
             f"❌ ماقدرتش نتحقق من الرصيد:\n{str(e)}"
         )
+
+
+# =========================================================
+# زر 💰 Balance
+# =========================================================
+
+@bot.message_handler(func=lambda message: message.text == "💰 Balance")
+def balance_button(message):
+
+    if message.chat.id != ADMIN_ID:
+        return
+
+    # نفس وظيفة /balance
+    check_balance(message)
 
 
 # =========================================================
@@ -143,14 +185,48 @@ def start_send(message):
 
 
 # =========================================================
+# زر 💸 Send
+# =========================================================
+
+@bot.message_handler(func=lambda message: message.text == "💸 Send")
+def send_button(message):
+
+    if message.chat.id != ADMIN_ID:
+        return
+
+    # نفس وظيفة /send
+    start_send(message)
+
+
+# =========================================================
+# زر 💼 My Wallet
+# =========================================================
+
+@bot.message_handler(func=lambda message: message.text == "💼 My Wallet")
+def wallet_button(message):
+
+    if message.chat.id != ADMIN_ID:
+        return
+
+    bot.reply_to(
+        message,
+        "💼 My Wallet\n\n"
+        f"`{MY_WALLET_ADDRESS}`",
+        parse_mode="Markdown"
+    )
+
+
+# =========================================================
 # إدخال عنوان المحفظة
 # =========================================================
 
 def process_address_step(message):
 
+    if message.chat.id != ADMIN_ID:
+        return
+
     address = message.text.strip()
 
-    # التحقق من صحة العنوان
     if not w3.is_address(address):
 
         bot.reply_to(
@@ -161,7 +237,6 @@ def process_address_step(message):
 
         return
 
-    # حفظ العنوان
     user_data[message.chat.id] = {
         'target_address': address
     }
@@ -186,9 +261,10 @@ def process_address_step(message):
 
 def process_amount_step(message):
 
-    try:
+    if message.chat.id != ADMIN_ID:
+        return
 
-        # ================= قراءة الكمية =================
+    try:
 
         amount_text = message.text.strip()
 
@@ -209,13 +285,13 @@ def process_amount_step(message):
             user_data[message.chat.id]['target_address']
         )
 
-        # ================= تحويل USDT إلى أصغر وحدة =================
+        # ================= كمية USDT =================
 
         amount_in_wei = int(
             amount * (10 ** 18)
         )
 
-        # ================= التحقق من رصيد USDT =================
+        # ================= رصيد USDT =================
 
         usdt_balance = usdt_contract.functions.balanceOf(
             my_address
@@ -256,14 +332,14 @@ def process_amount_step(message):
             'nonce': nonce
         })
 
-        # ================= توقيع المعاملة =================
+        # ================= توقيع =================
 
         signed_tx = w3.eth.account.sign_transaction(
             tx,
             private_key=PRIVATE_KEY
         )
 
-        # ================= إرسال المعاملة =================
+        # ================= إرسال =================
 
         tx_hash = w3.eth.send_raw_transaction(
             signed_tx.raw_transaction
@@ -282,7 +358,6 @@ def process_amount_step(message):
 
         if receipt['status'] == 1:
 
-            # قراءة الرصيد الجديد
             new_balance_raw = usdt_contract.functions.balanceOf(
                 my_address
             ).call()
@@ -307,8 +382,6 @@ def process_amount_step(message):
                 disable_web_page_preview=True
             )
 
-        # ================= فشل المعاملة =================
-
         else:
 
             bot.reply_to(
@@ -319,8 +392,6 @@ def process_amount_step(message):
                 parse_mode="Markdown",
                 disable_web_page_preview=True
             )
-
-    # ================= خطأ في الكمية =================
 
     except ValueError:
 
@@ -333,8 +404,6 @@ def process_amount_step(message):
             "عاود ابدأ بـ /send",
             parse_mode="Markdown"
         )
-
-    # ================= أخطاء أخرى =================
 
     except Exception as e:
 
